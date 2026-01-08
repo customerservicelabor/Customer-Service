@@ -1,281 +1,88 @@
-
-<!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Devoluções – Painel Executivo</title>
-
-  <!-- Chart.js (simples e suficiente para MVP) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-  <style>
-    :root{
-      --bg:#0b1020;
-      --card:#121a33;
-      --line:#243055;
-      --text:#e9ecf5;
-      --muted:#9aa4c0;
-      --accent:#3b82f6;
-      --warn:#f59e0b;
-      --good:#22c55e;
+{
+  "updated_at": "08/01/2026 11:00",
+  "months": ["2025-12", "2026-01"],
+  "monthly": {
+    "2025-12": {
+      "kpis": {
+        "qtd_devolucoes": 20,
+        "valor_devolvido": 53578.19,
+        "pendentes": 16,
+        "finalizados": 4,
+        "top_motivo": { "label": "Comercial", "pct": 40.0 },
+        "top_submotivo": { "label": "Avaria", "pct": 25.0 }
+      },
+      "charts": {
+        "motivo_macro": [
+          { "label": "Comercial", "value": 8 },
+          { "label": "Transportadores", "value": 8 },
+          { "label": "Qualidade", "value": 3 },
+          { "label": "Cliente", "value": 1 }
+        ],
+        "submotivo_top5": [
+          { "label": "Avaria", "value": 5 },
+          { "label": "Produto com desvio de qualidade", "value": 3 },
+          { "label": "Extravio", "value": 3 },
+          { "label": "Validade curta", "value": 2 },
+          { "label": "Divergência com o pedido do cliente", "value": 2 }
+        ],
+        "status_ticket": [
+          { "label": "Pending", "value": 16 },
+          { "label": "Solved", "value": 4 }
+        ],
+        "vendedor_top5_valor": [
+          { "label": "PRISCILA SOARES SILVA", "value": 14907.15 },
+          { "label": "LIDIANE DE JESUS SANTOS", "value": 13937.88 },
+          { "label": "LUCIANA APARECIDA BRESSAN", "value": 6976.09 },
+          { "label": "ERICA DA SILVA SOARES BARNES", "value": 7075.22 },
+          { "label": "JOELMA XAVIER NUNES", "value": 4416.25 }
+        ]
+      },
+      "top_tickets": [
+        {
+          "ticket_id": "39252",
+          "nf": "000198656",
+          "valor": 1631.67,
+          "motivo_macro": "Comercial",
+          "submotivo": "Sem Pedido de Compra",
+          "transportador": "Fedex/TNT",
+          "status_ticket": "Pending",
+          "created_date": "2025-12-29",
+          "zendesk_url": "https://SEU_ZENDESK/tickets/39252"
+        }
+      ]
+    },
+    "2026-01": {
+      "kpis": {
+        "qtd_devolucoes": 2,
+        "valor_devolvido": 3826.10,
+        "pendentes": 2,
+        "finalizados": 0,
+        "top_motivo": { "label": "Transportadores", "pct": 50.0 },
+        "top_submotivo": { "label": "Troca de volumes", "pct": 50.0 }
+      },
+      "charts": {
+        "motivo_macro": [
+          { "label": "Transportadores", "value": 1 },
+          { "label": "Comercial", "value": 1 }
+        ],
+        "submotivo_top5": [
+          { "label": "Troca de volumes", "value": 1 },
+          { "label": "Produto divergente", "value": 1 }
+        ],
+        "status_ticket": [
+          { "label": "Pending", "value": 2 },
+          { "label": "Solved", "value": 0 }
+        ],
+        "vendedor_top5_valor": [
+          { "label": "ANA PAULA APARECIDA DE JESUS SOUZA", "value": 3494.55 },
+          { "label": "DIEGO RICARDO CECILIO", "value": 331.55 }
+        ]
+      },
+      "top_tickets": []
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Segoe UI, Arial, sans-serif;background:var(--bg);color:var(--text)}
-    .wrap{max-width:1200px;margin:0 auto;padding:18px}
-    header{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-    .brand{display:flex;gap:12px;align-items:center}
-    .brand img{height:34px}
-    h1{margin:0;font-size:18px}
-    .meta{color:var(--muted);font-size:12px}
-    .controls{display:flex;gap:10px;align-items:center}
-    select{background:var(--card);color:var(--text);border:1px solid var(--line);padding:8px 10px;border-radius:10px}
-
-    .grid{display:grid;gap:12px}
-    .kpis{grid-template-columns:repeat(6,minmax(140px,1fr))}
-    .row2{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .row3{grid-template-columns:repeat(3,minmax(0,1fr))}
-    @media (max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}}
-    @media (max-width:700px){.kpis,.row2,.row3{grid-template-columns:1fr}}
-
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
-    .kpi-title{color:var(--muted);font-size:12px;margin-bottom:6px}
-    .kpi-value{font-size:18px;font-weight:700}
-    .kpi-sub{color:var(--muted);font-size:12px;margin-top:6px}
-
-    canvas{width:100% !important;height:280px !important}
-
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px 8px;border-bottom:1px solid var(--line);font-size:12px}
-    th{color:var(--muted);font-weight:600;text-align:left}
-    a{color:#93c5fd;text-decoration:none}
-    a:hover{text-decoration:underline}
-    .pill{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;color:var(--muted)}
-  </style>
-</head>
-
-<body>
-  <div class="wrap">
-    <header>
-      <div class="brand">
-        <!-- opcional: coloque sua logo em assets/logo-cs.png -->
-        <img src="assets/logo-cs.png" alt="CS" onerror="this.style.display='none'"/>
-        <div>
-          <h1>Devoluções – Painel Executivo</h1>
-          <div class="meta">
-            <span class="pill">Base: Criação do ticket (mês)</span>
-            &nbsp;•&nbsp; Atualizado em <span id="updatedAt">—</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="controls">
-        <span class="meta">Mês:</span>
-        <select id="monthSelect"></select>
-      </div>
-    </header>
-
-    <div style="height:12px"></div>
-
-    <!-- KPIs -->
-    <section class="grid kpis">
-      <div class="card"><div class="kpi-title">Qtd. Devoluções</div><div class="kpi-value" id="kpiQtd">—</div></div>
-      <div class="card"><div class="kpi-title">R$ Devolvido</div><div class="kpi-value" id="kpiValor">—</div></div>
-      <div class="card"><div class="kpi-title">Pendentes</div><div class="kpi-value" id="kpiPend">—</div></div>
-      <div class="card"><div class="kpi-title">Finalizados</div><div class="kpi-value" id="kpiFin">—</div></div>
-      <div class="card"><div class="kpi-title">Top Motivo</div><div class="kpi-value" id="kpiTopMot">—</div><div class="kpi-sub" id="kpiTopMotPct">—</div></div>
-      <div class="card"><div class="kpi-title">Top Submotivo</div><div class="kpi-value" id="kpiTopSub">—</div><div class="kpi-sub" id="kpiTopSubPct">—</div></div>
-    </section>
-
-    <div style="height:12px"></div>
-
-    <!-- Charts -->
-    <section class="grid row3">
-      <div class="card">
-        <div class="kpi-title">Motivo (macro) – Qtd</div>
-        <canvas id="chMotivo"></canvas>
-      </div>
-      <div class="card">
-        <div class="kpi-title">Top 5 Submotivos – Qtd</div>
-        <canvas id="chSub"></canvas>
-      </div>
-      <div class="card">
-        <div class="kpi-title">Status (Pending x Solved) – Qtd</div>
-        <canvas id="chStatus"></canvas>
-      </div>
-    </section>
-
-    <div style="height:12px"></div>
-
-    <section class="grid row2">
-      <div class="card">
-        <div class="kpi-title">Top 5 Vendedores – por Valor (R$)</div>
-        <canvas id="chVend"></canvas>
-      </div>
-      <div class="card">
-        <div class="kpi-title">Evolução mensal (Qtd) – Dez/Jan</div>
-        <canvas id="chEvo"></canvas>
-      </div>
-    </section>
-
-    <div style="height:12px"></div>
-
-    <!-- Table -->
-    <section class="card">
-      <div class="kpi-title">Top devoluções (últimos 10 tickets do mês)</div>
-      <div style="overflow:auto">
-        <table>
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Ticket</th>
-              <th>NF</th>
-              <th>Valor</th>
-              <th>Motivo</th>
-              <th>Submotivo</th>
-              <th>Status</th>
-              <th>Transportador</th>
-            </tr>
-          </thead>
-          <tbody id="topTable"></tbody>
-        </table>
-      </div>
-    </section>
-  </div>
-
-<script>
-  const fmtBRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
-
-  let DB = null;
-  let charts = {};
-
-  function destroyChart(id){
-    if(charts[id]){ charts[id].destroy(); charts[id] = null; }
-  }
-
-  function buildBarChart(canvasId, labels, values){
-    destroyChart(canvasId);
-    const ctx = document.getElementById(canvasId);
-    charts[canvasId] = new Chart(ctx, {
-      type: 'bar',
-      data: { labels, datasets: [{ data: values }] },
-      options: {
-        responsive:true,
-        plugins:{ legend:{display:false}, tooltip:{enabled:true} },
-        scales:{ x:{ ticks:{ color:'#9aa4c0' }, grid:{ color:'rgba(36,48,85,.4)' } },
-                 y:{ ticks:{ color:'#9aa4c0' }, grid:{ color:'rgba(36,48,85,.4)' } } }
-      }
-    });
-  }
-
-  function buildDoughnut(canvasId, labels, values){
-    destroyChart(canvasId);
-    const ctx = document.getElementById(canvasId);
-    charts[canvasId] = new Chart(ctx, {
-      type: 'doughnut',
-      data: { labels, datasets: [{ data: values }] },
-      options: { responsive:true, plugins:{ legend:{ labels:{ color:'#9aa4c0' } } } }
-    });
-  }
-
-  function buildLine(canvasId, labels, values){
-    destroyChart(canvasId);
-    const ctx = document.getElementById(canvasId);
-    charts[canvasId] = new Chart(ctx, {
-      type: 'line',
-      data: { labels, datasets: [{ data: values, tension:.25 }] },
-      options: {
-        responsive:true,
-        plugins:{ legend:{display:false} },
-        scales:{ x:{ ticks:{ color:'#9aa4c0' }, grid:{ color:'rgba(36,48,85,.4)' } },
-                 y:{ ticks:{ color:'#9aa4c0' }, grid:{ color:'rgba(36,48,85,.4)' } } }
-      }
-    });
-  }
-
-  function setKPIs(m){
-    const k = DB.monthly[m].kpis;
-    document.getElementById('kpiQtd').textContent = k.qtd_devolucoes ?? '—';
-    document.getElementById('kpiValor').textContent = (k.valor_devolvido!=null) ? fmtBRL.format(k.valor_devolvido) : '—';
-    document.getElementById('kpiPend').textContent = k.pendentes ?? '—';
-    document.getElementById('kpiFin').textContent = k.finalizados ?? '—';
-    document.getElementById('kpiTopMot').textContent = k.top_motivo?.label ?? '—';
-    document.getElementById('kpiTopMotPct').textContent = (k.top_motivo?.pct!=null) ? (k.top_motivo.pct + '% do mês') : '—';
-    document.getElementById('kpiTopSub').textContent = k.top_submotivo?.label ?? '—';
-    document.getElementById('kpiTopSubPct').textContent = (k.top_submotivo?.pct!=null) ? (k.top_submotivo.pct + '% do mês') : '—';
-  }
-
-  function setCharts(m){
-    const c = DB.monthly[m].charts;
-
-    buildBarChart('chMotivo',
-      c.motivo_macro.map(x=>x.label),
-      c.motivo_macro.map(x=>x.value)
-    );
-
-    buildBarChart('chSub',
-      c.submotivo_top5.map(x=>x.label),
-      c.submotivo_top5.map(x=>x.value)
-    );
-
-    buildDoughnut('chStatus',
-      c.status_ticket.map(x=>x.label),
-      c.status_ticket.map(x=>x.value)
-    );
-
-    buildBarChart('chVend',
-      c.vendedor_top5_valor.map(x=>x.label),
-      c.vendedor_top5_valor.map(x=>x.value)
-    );
-
-    buildLine('chEvo',
-      DB.evolution.map(x=>x.month),
-      DB.evolution.map(x=>x.qtd)
-    );
-  }
-
-  function setTable(m){
-    const rows = DB.monthly[m].top_tickets || [];
-    const tbody = document.getElementById('topTable');
-    tbody.innerHTML = rows.slice(0,10).map(r => `
-      <tr>
-        <td>${r.created_date ?? ''}</td>
-        <td><a href="${r.zendesk_url ?? '#'}" target="_blank">${r.ticket_id ?? ''}</a></td>
-        <td>${r.nf ?? ''}</td>
-        <td>${(r.valor!=null)? fmtBRL.format(r.valor): ''}</td>
-        <td>${r.motivo_macro ?? ''}</td>
-        <td>${r.submotivo ?? ''}</td>
-        <td>${r.status_ticket ?? ''}</td>
-        <td>${r.transportador ?? ''}</td>
-      </tr>
-    `).join('');
-  }
-
-  function renderMonth(m){
-    setKPIs(m);
-    setCharts(m);
-    setTable(m);
-  }
-
-  async function load(){
-    const r = await fetch(`data.json?v=${Date.now()}`, { cache:'no-store' });
-    DB = await r.json();
-
-    document.getElementById('updatedAt').textContent = DB.updated_at || '—';
-
-    const sel = document.getElementById('monthSelect');
-    sel.innerHTML = (DB.months||[]).map(m => `<option value="${m}">${m}</option>`).join('');
-
-    // default: último mês disponível
-    const defaultMonth = (DB.months && DB.months.length) ? DB.months[DB.months.length-1] : null;
-    if(defaultMonth) sel.value = defaultMonth;
-
-    sel.addEventListener('change', e => renderMonth(e.target.value));
-
-    if(defaultMonth) renderMonth(defaultMonth);
-  }
-
-  load();
-</script>
-</body>
-</html>
+  },
+  "evolution": [
+    { "month": "2025-12", "qtd": 20, "valor": 53578.19 },
+    { "month": "2026-01", "qtd": 2, "valor": 3826.10 }
+  ]
+}
