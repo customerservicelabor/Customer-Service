@@ -5,273 +5,676 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Devoluções – Painel Executivo</title>
 
-  <!-- Chart.js (simples e suficiente para MVP) -->
+  <!-- Chart.js + DataLabels (para escrever valores nas colunas) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 
   <style>
     :root{
-      --bg:#0b1020;
-      --card:#121a33;
-      --line:#243055;
-      --text:#e9ecf5;
-      --muted:#9aa4c0;
-      --accent:#3b82f6;
+      --bg:#ffffff;
+      --card:#ffffff;
+      --line:#d8dee9;
+      --text:#111827;
+      --muted:#4b5563;
+      --shadow: 0 6px 24px rgba(16,24,40,.08);
+
+      --good:#16a34a;
       --warn:#f59e0b;
-      --good:#22c55e;
+      --bad:#dc2626;
+      --brand:#1d4ed8;
+
+      --radius:16px;
     }
+
     *{box-sizing:border-box}
-    body{margin:0;font-family:Segoe UI, Arial, sans-serif;background:var(--bg);color:var(--text)}
-    .wrap{max-width:1200px;margin:0 auto;padding:18px}
-    header{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    body{
+      margin:0;
+      font-family: Segoe UI, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    /* Fundo com imagem (opcional). Para ativar, basta manter body com data-bg="image" */
+    body[data-bg="image"]::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      background-image:url("assets/capa-bi-01_NOVA LABOR.jpg");
+      background-size:cover;
+      background-position:center;
+      opacity:.18; /* ajuste aqui se quiser mais/menos visível */
+      pointer-events:none;
+      z-index:-1;
+    }
+
+    .wrap{max-width:1280px;margin:0 auto;padding:18px}
+
+    header{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
     .brand{display:flex;gap:12px;align-items:center}
-    .brand img{height:34px}
-    h1{margin:0;font-size:18px}
+    .brand img{height:44px}
+    h1{margin:0;font-size:18px;font-weight:800;letter-spacing:.2px}
     .meta{color:var(--muted);font-size:12px}
+
     .controls{display:flex;gap:10px;align-items:center}
-    select{background:var(--card);color:var(--text);border:1px solid var(--line);padding:8px 10px;border-radius:10px}
+    .controls label{color:var(--muted);font-size:12px}
+    select{
+      background:var(--card);
+      color:var(--text);
+      border:1px solid var(--line);
+      padding:10px 14px;            /* maior */
+      border-radius:12px;
+      min-width:190px;              /* maior */
+      font-size:14px;               /* maior */
+      box-shadow: var(--shadow);
+    }
 
     .grid{display:grid;gap:12px}
-    .kpis{grid-template-columns:repeat(6,minmax(140px,1fr))}
-    .row2{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+    /* 4 KPIs grandes */
+    .kpis{grid-template-columns:repeat(4,minmax(220px,1fr))}
+    @media (max-width:980px){.kpis{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:620px){.kpis{grid-template-columns:1fr}}
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      padding:16px;
+      box-shadow: var(--shadow);
+    }
+    .kpi-title{color:var(--muted);font-size:12px;margin-bottom:8px}
+    .kpi-value{font-size:26px;font-weight:900;line-height:1.1}
+    .kpi-sub{color:var(--muted);font-size:12px;margin-top:8px}
+
+    /* Segunda linha de cards (valores pendente/resolvido / SLA / custo) */
+    .kpis2{grid-template-columns:repeat(4,minmax(220px,1fr))}
+    @media (max-width:980px){.kpis2{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:620px){.kpis2{grid-template-columns:1fr}}
+
+    .pill{
+      display:inline-block;
+      padding:4px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      color:var(--muted);
+      font-size:11px;
+      background:rgba(255,255,255,.7);
+    }
+
     .row3{grid-template-columns:repeat(3,minmax(0,1fr))}
-    @media (max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}}
-    @media (max-width:700px){.kpis,.row2,.row3{grid-template-columns:1fr}}
+    @media (max-width:980px){.row3{grid-template-columns:1fr}}
 
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
-    .kpi-title{color:var(--muted);font-size:12px;margin-bottom:6px}
-    .kpi-value{font-size:18px;font-weight:700}
-    .kpi-sub{color:var(--muted);font-size:12px;margin-top:6px}
+    canvas{width:100% !important;height:300px !important}
 
-    canvas{width:100% !important;height:280px !important}
+    .section-title{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      margin-bottom:8px;
+    }
+    .section-title .t{font-weight:800;font-size:13px;color:#111827}
+    .section-title .s{font-size:12px;color:var(--muted)}
+
+    /* Tabela + filtros */
+    .filters{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr 1fr 1fr 1fr 1fr;
+      gap:10px;
+      margin:10px 0 14px;
+    }
+    @media (max-width:1100px){.filters{grid-template-columns:1fr 1fr}}
+    input, .sel{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px 12px;
+      font-size:13px;
+      box-shadow: var(--shadow);
+      width:100%;
+    }
+    .hint{color:var(--muted);font-size:12px}
 
     table{width:100%;border-collapse:collapse}
-    th,td{padding:10px 8px;border-bottom:1px solid var(--line);font-size:12px}
-    th{color:var(--muted);font-weight:600;text-align:left}
-    a{color:#93c5fd;text-decoration:none}
+    th,td{padding:10px 8px;border-bottom:1px solid var(--line);font-size:12px;white-space:nowrap}
+    th{
+      color:var(--muted);
+      font-weight:700;
+      text-align:left;
+      cursor:pointer;
+      user-select:none;
+    }
+    th span{color:#9ca3af;font-weight:600;margin-left:6px}
+    a{color:var(--brand);text-decoration:none}
     a:hover{text-decoration:underline}
-    .pill{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;color:var(--muted)}
+
+    .right{text-align:right}
+    .badge{
+      display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;
+    }
   </style>
 </head>
 
-<body>
+<!-- fundo branco: deixe sem data-bg. fundo imagem: data-bg="image" -->
+<body data-bg="image">
   <div class="wrap">
     <header>
       <div class="brand">
-        <!-- opcional: coloque sua logo em assets/logo-cs.png -->
+        <!-- opcional -->
         <img src="assets/logo-cs.png" alt="CS" onerror="this.style.display='none'"/>
         <div>
           <h1>Devoluções – Painel Executivo</h1>
           <div class="meta">
             <span class="pill">Base: Criação do ticket (mês)</span>
-            &nbsp;•&nbsp; Atualizado em <span id="updatedAt">—</span>
+            &nbsp;•&nbsp; Atualizado em <b id="updatedAt">—</b>
           </div>
         </div>
       </div>
 
       <div class="controls">
-        <span class="meta">Mês:</span>
+        <label for="monthSelect">Mês</label>
         <select id="monthSelect"></select>
       </div>
     </header>
 
-    <div style="height:12px"></div>
+    <div style="height:14px"></div>
 
-    <!-- KPIs -->
+    <!-- KPIs (4) -->
     <section class="grid kpis">
-      <div class="card"><div class="kpi-title">Qtd. Devoluções</div><div class="kpi-value" id="kpiQtd">—</div></div>
-      <div class="card"><div class="kpi-title">R$ Devolvido</div><div class="kpi-value" id="kpiValor">—</div></div>
-      <div class="card"><div class="kpi-title">Pendentes</div><div class="kpi-value" id="kpiPend">—</div></div>
-      <div class="card"><div class="kpi-title">Finalizados</div><div class="kpi-value" id="kpiFin">—</div></div>
-      <div class="card"><div class="kpi-title">Top Motivo</div><div class="kpi-value" id="kpiTopMot">—</div><div class="kpi-sub" id="kpiTopMotPct">—</div></div>
-      <div class="card"><div class="kpi-title">Top Submotivo</div><div class="kpi-value" id="kpiTopSub">—</div><div class="kpi-sub" id="kpiTopSubPct">—</div></div>
+      <div class="card">
+        <div class="kpi-title">Qtd. Devoluções</div>
+        <div class="kpi-value" id="kpiQtd">—</div>
+        <div class="kpi-sub">Total de tickets no mês</div>
+      </div>
+      <div class="card">
+        <div class="kpi-title">R$ Devolvido</div>
+        <div class="kpi-value" id="kpiValor">—</div>
+        <div class="kpi-sub">Soma de “R$ NFD”</div>
+      </div>
+      <div class="card">
+        <div class="kpi-title">Pendentes</div>
+        <div class="kpi-value" id="kpiPend">—</div>
+        <div class="kpi-sub">Status ≠ Closed/Solved</div>
+      </div>
+      <div class="card">
+        <div class="kpi-title">Finalizados</div>
+        <div class="kpi-value" id="kpiFin">—</div>
+        <div class="kpi-sub">Status Closed/Solved</div>
+      </div>
     </section>
 
     <div style="height:12px"></div>
 
-    <!-- Charts -->
+    <!-- Cards substituindo o gráfico de status -->
+    <section class="grid kpis2">
+      <div class="card">
+        <div class="kpi-title">R$ Pendente</div>
+        <div class="kpi-value" id="kpiValorPend">—</div>
+        <div class="kpi-sub">Valor em tickets pendentes</div>
+      </div>
+      <div class="card">
+        <div class="kpi-title">R$ Resolvido</div>
+        <div class="kpi-value" id="kpiValorRes">—</div>
+        <div class="kpi-sub">Valor em tickets finalizados</div>
+      </div>
+      <div class="card">
+        <div class="kpi-title">SLA médio (dias)</div>
+        <div class="kpi-value" id="kpiSla">—</div>
+        <div class="kpi-sub">Média (Resolução - Criação)</div>
+      </div>
+      <div class="card">
+        <div class="kpi-title">Custo operacional (R$)</div>
+        <div class="kpi-value" id="kpiCusto">—</div>
+        <div class="kpi-sub">Tempo analista + frete (quando disponível)</div>
+      </div>
+    </section>
+
+    <div style="height:12px"></div>
+
+    <!-- Gráficos -->
     <section class="grid row3">
       <div class="card">
-        <div class="kpi-title">Motivo (macro) – Qtd</div>
+        <div class="section-title">
+          <div class="t">Motivo (macro) — Qtd</div>
+          <div class="s">com valores nas colunas</div>
+        </div>
         <canvas id="chMotivo"></canvas>
       </div>
+
       <div class="card">
-        <div class="kpi-title">Top 5 Submotivos – Qtd</div>
+        <div class="section-title">
+          <div class="t">Top 5 Submotivos — Qtd</div>
+          <div class="s">com valores nas colunas</div>
+        </div>
         <canvas id="chSub"></canvas>
       </div>
+
       <div class="card">
-        <div class="kpi-title">Status (Pending x Solved) – Qtd</div>
-        <canvas id="chStatus"></canvas>
+        <div class="section-title">
+          <div class="t">Devoluções por dia — Qtd</div>
+          <div class="s">dia do mês (criação do ticket)</div>
+        </div>
+        <canvas id="chDia"></canvas>
       </div>
     </section>
 
-    <div style="height:12px"></div>
+    <div style="height:14px"></div>
 
-    <section class="grid row2">
-      <div class="card">
-        <div class="kpi-title">Top 5 Vendedores – por Valor (R$)</div>
-        <canvas id="chVend"></canvas>
-      </div>
-      <div class="card">
-        <div class="kpi-title">Evolução mensal (Qtd) – Dez/Jan</div>
-        <canvas id="chEvo"></canvas>
-      </div>
-    </section>
-
-    <div style="height:12px"></div>
-
-    <!-- Table -->
+    <!-- Tabela completa do mês + filtros -->
     <section class="card">
-      <div class="kpi-title">Top devoluções (últimos 10 tickets do mês)</div>
-      <div style="overflow:auto">
+      <div class="section-title">
+        <div class="t">Devoluções registradas no mês</div>
+        <div class="s"><span id="tableCount">0</span> registros</div>
+      </div>
+
+      <div class="filters">
+        <input id="fDate" placeholder="Data (YYYY-MM-DD) ex: 2025-12-23" />
+        <input id="fMin" placeholder="Valor mínimo (ex: 500)" />
+        <select id="fMotivo" class="sel"></select>
+        <select id="fSubmotivo" class="sel"></select>
+        <select id="fStatus" class="sel"></select>
+        <select id="fTransp" class="sel"></select>
+      </div>
+      <div class="hint">Dica: você pode ordenar clicando no cabeçalho da coluna.</div>
+
+      <div style="overflow:auto;margin-top:10px">
         <table>
           <thead>
             <tr>
-              <th>Data</th>
-              <th>Ticket</th>
-              <th>NF</th>
-              <th>Valor</th>
-              <th>Motivo</th>
-              <th>Submotivo</th>
-              <th>Status</th>
-              <th>Transportador</th>
+              <th data-key="created_date">Criação <span id="s_created_date"></span></th>
+              <th data-key="ticket_id">Ticket <span id="s_ticket_id"></span></th>
+              <th data-key="nf">NF <span id="s_nf"></span></th>
+              <th data-key="valor" class="right">Valor (R$) <span id="s_valor"></span></th>
+              <th data-key="motivo_macro">Motivo <span id="s_motivo_macro"></span></th>
+              <th data-key="submotivo">Submotivo <span id="s_submotivo"></span></th>
+              <th data-key="status_ticket">Status <span id="s_status_ticket"></span></th>
+              <th data-key="transportador">Transportador <span id="s_transportador"></span></th>
+              <th data-key="resolved_at">Resolução <span id="s_resolved_at"></span></th>
+              <th data-key="sla_days" class="right">SLA (dias) <span id="s_sla_days"></span></th>
+              <th data-key="custo_operacional" class="right">Custo (R$) <span id="s_custo_operacional"></span></th>
             </tr>
           </thead>
-          <tbody id="topTable"></tbody>
+          <tbody id="tbody"></tbody>
         </table>
       </div>
     </section>
   </div>
 
 <script>
+  Chart.register(ChartDataLabels);
+
   const fmtBRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
+  const ZENDESK_BASE = "https://suporte.laborhs.com.br/hc/pt-br/requests/";
 
   let DB = null;
+  let month = null;
+
   let charts = {};
+  let sortState = { key: "created_date", dir: "desc" };
+  let currentRows = [];
 
   function destroyChart(id){
     if(charts[id]){ charts[id].destroy(); charts[id] = null; }
   }
 
-  function buildBarChart(canvasId, labels, values){
+  function isFinalizado(status){
+    const s = String(status||"").toLowerCase();
+    return s === "closed" || s === "solved";
+  }
+
+  function toNumber(v){
+    if(v === null || v === undefined) return 0;
+    const s = String(v).replace(/\s/g,'').replace(/\./g,'').replace(',', '.');
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function parseDate(d){
+    // espera YYYY-MM-DD
+    if(!d) return null;
+    const t = String(d).trim();
+    const m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(!m) return null;
+    return new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`);
+  }
+
+  function parseResolvedISO(dt){
+    // exemplo: 2025-10-30T09:04:51
+    if(!dt) return null;
+    const t = String(dt).trim();
+    const d = new Date(t);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function daysDiff(a,b){
+    return Math.round((b.getTime()-a.getTime())/(1000*60*60*24));
+  }
+
+  function monthKeyFromCreated(created_date){
+    const m = String(created_date||"").slice(0,7);
+    return /^\d{4}-\d{2}$/.test(m) ? m : null;
+  }
+
+  function uniqueSorted(arr){
+    return Array.from(new Set(arr)).filter(Boolean).sort((a,b)=>a.localeCompare(b));
+  }
+
+  function aggregateCount(rows, key){
+    const map = new Map();
+    for(const r of rows){
+      const k = (r[key] ?? "").toString().trim();
+      if(!k) continue;
+      map.set(k, (map.get(k)||0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([label,value])=>({label,value}))
+      .sort((a,b)=>b.value-a.value);
+  }
+
+  function aggregateByDay(rows){
+    const map = new Map();
+    for(const r of rows){
+      const d = String(r.created_date||"").slice(0,10);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+      map.set(d, (map.get(d)||0)+1);
+    }
+    return Array.from(map.entries())
+      .map(([day,qtd])=>({day,qtd}))
+      .sort((a,b)=>a.day.localeCompare(b.day));
+  }
+
+  function buildBarWithLabels(canvasId, labels, values){
     destroyChart(canvasId);
-    const ctx = document.getElementById(canvasId);
-    charts[canvasId] = new Chart(ctx, {
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
       type: 'bar',
       data: { labels, datasets: [{ data: values }] },
       options: {
         responsive:true,
-        plugins:{ legend:{display:false}, tooltip:{enabled:true} },
-        scales:{ x:{ ticks:{ color:'#9aa4c0' }, grid:{ color:'rgba(36,48,85,.4)' } },
-                 y:{ ticks:{ color:'#9aa4c0' }, grid:{ color:'rgba(36,48,85,.4)' } } }
+        plugins:{
+          legend:{display:false},
+          datalabels:{
+            anchor:'end',
+            align:'end',
+            formatter:(v)=> v,
+            color:'#111827',
+            font:{weight:'700'}
+          },
+          tooltip:{enabled:true}
+        },
+        scales:{
+          x:{ ticks:{ color:'#374151' }, grid:{ color:'rgba(0,0,0,.06)' } },
+          y:{ ticks:{ color:'#374151' }, grid:{ color:'rgba(0,0,0,.06)' }, beginAtZero:true }
+        }
       }
     });
   }
 
-  function buildDoughnut(canvasId, labels, values){
+  function buildLineWithLabels(canvasId, labels, values){
     destroyChart(canvasId);
-    const ctx = document.getElementById(canvasId);
-    charts[canvasId] = new Chart(ctx, {
-      type: 'doughnut',
-      data: { labels, datasets: [{ data: values }] },
-      options: { responsive:true, plugins:{ legend:{ labels:{ color:'#9aa4c0' } } } }
-    });
-  }
-
-  function buildLine(canvasId, labels, values){
-    destroyChart(canvasId);
-    const ctx = document.getElementById(canvasId);
-    charts[canvasId] = new Chart(ctx, {
-      type: 'line',
-      data: { labels, datasets: [{ data: values, tension:.25 }] },
-      options: {
-        responsive:true,
-        plugins:{ legend:{display:false} },
-        scales:{ x:{ ticks:{ color:'#9aa4c0' }, grid:{ color:'rgba(36,48,85,.4)' } },
-                 y:{ ticks:{ color:'#9aa4c0' }, grid:{ color:'rgba(36,48,85,.4)' } } }
+    charts[canvasId] = new Chart(document.getElementById(canvasId), {
+      type:'line',
+      data:{ labels, datasets:[{ data:values, tension:.25, pointRadius:4 }] },
+      options:{
+        plugins:{
+          legend:{display:false},
+          datalabels:{
+            anchor:'end',
+            align:'top',
+            formatter:(v)=> v,
+            color:'#111827',
+            font:{weight:'700'}
+          }
+        },
+        scales:{
+          x:{ ticks:{ color:'#374151' }, grid:{ color:'rgba(0,0,0,.06)' } },
+          y:{ ticks:{ color:'#374151' }, grid:{ color:'rgba(0,0,0,.06)' }, beginAtZero:true }
+        }
       }
     });
   }
 
-  function setKPIs(m){
-    const k = DB.monthly[m].kpis;
-    document.getElementById('kpiQtd').textContent = k.qtd_devolucoes ?? '—';
-    document.getElementById('kpiValor').textContent = (k.valor_devolvido!=null) ? fmtBRL.format(k.valor_devolvido) : '—';
-    document.getElementById('kpiPend').textContent = k.pendentes ?? '—';
-    document.getElementById('kpiFin').textContent = k.finalizados ?? '—';
-    document.getElementById('kpiTopMot').textContent = k.top_motivo?.label ?? '—';
-    document.getElementById('kpiTopMotPct').textContent = (k.top_motivo?.pct!=null) ? (k.top_motivo.pct + '% do mês') : '—';
-    document.getElementById('kpiTopSub').textContent = k.top_submotivo?.label ?? '—';
-    document.getElementById('kpiTopSubPct').textContent = (k.top_submotivo?.pct!=null) ? (k.top_submotivo.pct + '% do mês') : '—';
+  function fillSelect(id, options, placeholder){
+    const el = document.getElementById(id);
+    const first = `<option value="">${placeholder}</option>`;
+    el.innerHTML = first + options.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
   }
 
-  function setCharts(m){
-    const c = DB.monthly[m].charts;
-
-    buildBarChart('chMotivo',
-      c.motivo_macro.map(x=>x.label),
-      c.motivo_macro.map(x=>x.value)
-    );
-
-    buildBarChart('chSub',
-      c.submotivo_top5.map(x=>x.label),
-      c.submotivo_top5.map(x=>x.value)
-    );
-
-    buildDoughnut('chStatus',
-      c.status_ticket.map(x=>x.label),
-      c.status_ticket.map(x=>x.value)
-    );
-
-    buildBarChart('chVend',
-      c.vendedor_top5_valor.map(x=>x.label),
-      c.vendedor_top5_valor.map(x=>x.value)
-    );
-
-    buildLine('chEvo',
-      DB.evolution.map(x=>x.month),
-      DB.evolution.map(x=>x.qtd)
-    );
+  function escapeHtml(s){
+    return String(s??"")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;");
   }
 
-  function setTable(m){
-    const rows = DB.monthly[m].top_tickets || [];
-    const tbody = document.getElementById('topTable');
-    tbody.innerHTML = rows.slice(0,10).map(r => `
-      <tr>
-        <td>${r.created_date ?? ''}</td>
-        <td><a href="${r.zendesk_url ?? '#'}" target="_blank">${r.ticket_id ?? ''}</a></td>
-        <td>${r.nf ?? ''}</td>
-        <td>${(r.valor!=null)? fmtBRL.format(r.valor): ''}</td>
-        <td>${r.motivo_macro ?? ''}</td>
-        <td>${r.submotivo ?? ''}</td>
-        <td>${r.status_ticket ?? ''}</td>
-        <td>${r.transportador ?? ''}</td>
-      </tr>
-    `).join('');
+  function applyKPIs(rows){
+    const qtd = rows.length;
+    const valorTotal = rows.reduce((acc,r)=>acc + toNumber(r.valor),0);
+
+    const pend = rows.filter(r=>!isFinalizado(r.status_ticket));
+    const fin  = rows.filter(r=> isFinalizado(r.status_ticket));
+
+    const pendQtd = pend.length;
+    const finQtd  = fin.length;
+
+    const valorPend = pend.reduce((acc,r)=>acc + toNumber(r.valor),0);
+    const valorRes  = fin.reduce((acc,r)=>acc + toNumber(r.valor),0);
+
+    // SLA médio: só tickets que possuem resolved_at válido
+    const slaVals = rows
+      .map(r => r.sla_days)
+      .filter(v => Number.isFinite(v));
+
+    const slaMed = slaVals.length ? (slaVals.reduce((a,b)=>a+b,0) / slaVals.length) : null;
+
+    const custoVals = rows
+      .map(r => toNumber(r.custo_operacional))
+      .filter(v => v > 0);
+    const custoTotal = custoVals.reduce((a,b)=>a+b,0);
+
+    document.getElementById('kpiQtd').textContent = qtd;
+    document.getElementById('kpiValor').textContent = fmtBRL.format(valorTotal);
+    document.getElementById('kpiPend').textContent = pendQtd;
+    document.getElementById('kpiFin').textContent  = finQtd;
+
+    document.getElementById('kpiValorPend').textContent = fmtBRL.format(valorPend);
+    document.getElementById('kpiValorRes').textContent  = fmtBRL.format(valorRes);
+
+    document.getElementById('kpiSla').textContent = (slaMed==null) ? "—" : slaMed.toFixed(1);
+    document.getElementById('kpiCusto').textContent = (custoTotal>0) ? fmtBRL.format(custoTotal) : "—";
   }
 
-  function renderMonth(m){
-    setKPIs(m);
-    setCharts(m);
-    setTable(m);
+  function applyCharts(rows){
+    // Motivo macro
+    const motivo = aggregateCount(rows, "motivo_macro");
+    buildBarWithLabels("chMotivo", motivo.map(x=>x.label), motivo.map(x=>x.value));
+
+    // Submotivo Top 5
+    const sub = aggregateCount(rows, "submotivo").slice(0,5);
+    buildBarWithLabels("chSub", sub.map(x=>x.label), sub.map(x=>x.value));
+
+    // Por dia (qtd)
+    const byDay = aggregateByDay(rows);
+    buildLineWithLabels("chDia", byDay.map(x=>x.day.slice(8,10)), byDay.map(x=>x.qtd));
+  }
+
+  function buildFilterLists(rows){
+    fillSelect("fMotivo", uniqueSorted(rows.map(r=>r.motivo_macro)), "Motivo (todos)");
+    fillSelect("fSubmotivo", uniqueSorted(rows.map(r=>r.submotivo)), "Submotivo (todos)");
+    fillSelect("fStatus", uniqueSorted(rows.map(r=>r.status_ticket)), "Status (todos)");
+    fillSelect("fTransp", uniqueSorted(rows.map(r=>r.transportador)), "Transportador (todos)");
+  }
+
+  function applyFilters(rows){
+    const date = document.getElementById("fDate").value.trim();
+    const minV = toNumber(document.getElementById("fMin").value);
+    const motivo = document.getElementById("fMotivo").value;
+    const sub = document.getElementById("fSubmotivo").value;
+    const st = document.getElementById("fStatus").value;
+    const tr = document.getElementById("fTransp").value;
+
+    return rows.filter(r=>{
+      if(date && String(r.created_date).slice(0,10) !== date) return false;
+      if(minV && toNumber(r.valor) < minV) return false;
+      if(motivo && r.motivo_macro !== motivo) return false;
+      if(sub && r.submotivo !== sub) return false;
+      if(st && r.status_ticket !== st) return false;
+      if(tr && r.transportador !== tr) return false;
+      return true;
+    });
+  }
+
+  function sortRows(rows){
+    const { key, dir } = sortState;
+    const mult = dir === "asc" ? 1 : -1;
+
+    return [...rows].sort((a,b)=>{
+      const va = a[key];
+      const vb = b[key];
+
+      // numéricos
+      if(key === "valor" || key === "sla_days" || key === "custo_operacional"){
+        return (toNumber(va) - toNumber(vb)) * mult;
+      }
+
+      // datas
+      if(key === "created_date" || key === "resolved_at"){
+        return String(va||"").localeCompare(String(vb||"")) * mult;
+      }
+
+      // texto
+      return String(va||"").localeCompare(String(vb||""), "pt-BR") * mult;
+    });
+  }
+
+  function setSortIndicators(){
+    document.querySelectorAll("th[data-key]").forEach(th=>{
+      const k = th.getAttribute("data-key");
+      const span = document.getElementById("s_"+k);
+      if(!span) return;
+      span.textContent = (k === sortState.key) ? (sortState.dir === "asc" ? "▲" : "▼") : "";
+    });
+  }
+
+  function renderTable(rows){
+    const tbody = document.getElementById("tbody");
+    document.getElementById("tableCount").textContent = rows.length;
+
+    tbody.innerHTML = rows.map(r=>{
+      const ticketUrl = ZENDESK_BASE + encodeURIComponent(r.ticket_id || "");
+      const status = escapeHtml(r.status_ticket || "");
+      const resolved = r.resolved_at ? escapeHtml(String(r.resolved_at).replace("T"," ").slice(0,19)) : "";
+      const custo = toNumber(r.custo_operacional);
+
+      return `
+        <tr>
+          <td>${escapeHtml(String(r.created_date||"").slice(0,10))}</td>
+          <td><a href="${ticketUrl}" target="_blank">${escapeHtml(r.ticket_id||"")}</a></td>
+          <td>${escapeHtml(r.nf||"")}</td>
+          <td class="right">${fmtBRL.format(toNumber(r.valor))}</td>
+          <td>${escapeHtml(r.motivo_macro||"")}</td>
+          <td>${escapeHtml(r.submotivo||"")}</td>
+          <td><span class="badge">${status}</span></td>
+          <td>${escapeHtml(r.transportador||"")}</td>
+          <td>${resolved}</td>
+          <td class="right">${Number.isFinite(r.sla_days) ? r.sla_days : ""}</td>
+          <td class="right">${custo>0 ? fmtBRL.format(custo) : ""}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function computeDerivedFields(item){
+    const created = parseDate(item.created_date);
+    const resolved = parseResolvedISO(item.resolved_at);
+
+    let sla = null;
+    if(created && resolved){
+      const d = daysDiff(created, resolved);
+      sla = Number.isFinite(d) && d >= 0 ? d : null;
+    }
+
+    return {
+      ...item,
+      valor: toNumber(item.valor),
+      custo_operacional: (item.custo_operacional==null ? 0 : toNumber(item.custo_operacional)),
+      sla_days: (sla==null ? null : sla)
+    };
+  }
+
+  function render(){
+    // pega itens do mês
+    const all = (DB.items||[]).map(computeDerivedFields);
+    const monthRows = all.filter(r=>monthKeyFromCreated(r.created_date) === month);
+
+    // KPIs e gráficos usam base do mês inteiro (sem filtros)
+    applyKPIs(monthRows);
+    applyCharts(monthRows);
+    buildFilterLists(monthRows);
+
+    // tabela: aplica filtros + ordenação
+    const filtered = applyFilters(monthRows);
+    const sorted = sortRows(filtered);
+
+    currentRows = sorted;
+    setSortIndicators();
+    renderTable(sorted);
+  }
+
+  function hookFilters(){
+    ["fDate","fMin","fMotivo","fSubmotivo","fStatus","fTransp"].forEach(id=>{
+      document.getElementById(id).addEventListener("input", render);
+      document.getElementById(id).addEventListener("change", render);
+    });
+
+    document.querySelectorAll("th[data-key]").forEach(th=>{
+      th.addEventListener("click", ()=>{
+        const k = th.getAttribute("data-key");
+        if(sortState.key === k){
+          sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+        }else{
+          sortState.key = k;
+          sortState.dir = "desc";
+        }
+        render();
+      });
+    });
   }
 
   async function load(){
-    const r = await fetch(`data.json?v=${Date.now()}`, { cache:'no-store' });
+    const r = await fetch(`./data.json?v=${Date.now()}`, { cache:"no-store" });
     DB = await r.json();
 
-    document.getElementById('updatedAt').textContent = DB.updated_at || '—';
+    document.getElementById("updatedAt").textContent = DB.updated_at || "—";
 
-    const sel = document.getElementById('monthSelect');
-    sel.innerHTML = (DB.months||[]).map(m => `<option value="${m}">${m}</option>`).join('');
+    // Lista de meses a partir dos próprios itens (melhor do que manter months manual)
+    const months = Array.from(new Set((DB.items||[]).map(x=>monthKeyFromCreated(x.created_date)).filter(Boolean)))
+      .sort((a,b)=>a.localeCompare(b));
 
-    // default: último mês disponível
-    const defaultMonth = (DB.months && DB.months.length) ? DB.months[DB.months.length-1] : null;
-    if(defaultMonth) sel.value = defaultMonth;
+    const sel = document.getElementById("monthSelect");
+    sel.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join("");
 
-    sel.addEventListener('change', e => renderMonth(e.target.value));
+    // default: último mês
+    month = months.length ? months[months.length-1] : null;
+    if(month) sel.value = month;
 
-    if(defaultMonth) renderMonth(defaultMonth);
+    sel.addEventListener("change", (e)=>{
+      month = e.target.value;
+      // reset filtros
+      document.getElementById("fDate").value = "";
+      document.getElementById("fMin").value = "";
+      document.getElementById("fMotivo").value = "";
+      document.getElementById("fSubmotivo").value = "";
+      document.getElementById("fStatus").value = "";
+      document.getElementById("fTransp").value = "";
+      render();
+    });
+
+    hookFilters();
+    if(month) render();
   }
 
   load();
