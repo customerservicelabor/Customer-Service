@@ -326,11 +326,45 @@
   }
 
   function toNumber(v){
-    if(v === null || v === undefined) return 0;
-    const s = String(v).replace(/\s/g,'').replace(/\./g,'').replace(',', '.');
+  if(v === null || v === undefined) return 0;
+
+  let s = String(v).trim();
+
+  if(!s) return 0;
+
+  // remove moeda e espaços
+  s = s.replace(/[R$\s]/g, "");
+
+  const hasComma = s.includes(",");
+  const hasDot   = s.includes(".");
+
+  // pt-BR: 1.234,56
+  if(hasComma && hasDot){
+    s = s.replace(/\./g, "").replace(",", ".");
     const n = Number(s);
     return Number.isFinite(n) ? n : 0;
   }
+
+  // pt-BR simples: 1234,56
+  if(hasComma && !hasDot){
+    s = s.replace(",", ".");
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  // padrão US: 1234.56  OU  milhar: 1.234
+  if(!hasComma && hasDot){
+    if(/\.\d{3}$/.test(s)){
+      s = s.replace(/\./g, "");
+    }
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
 
   function parseDate(d){
     // espera YYYY-MM-DD
@@ -681,3 +715,4 @@
 </script>
 </body>
 </html>
+
